@@ -24,6 +24,7 @@ class Structure{
     void savePoints(string);
     void saveDensity(string);
     void saveIntensity(string);
+    void ewaldSphere(XYZ, string);
 
   private:
 
@@ -33,6 +34,7 @@ class Structure{
 
     XYZ boxSize;
     XYZ voxelSize;
+    XYZ voxelFFTSize;
     XYZ nVoxel;
 
     XYZ mean;

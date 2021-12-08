@@ -72,8 +72,8 @@ void Structure::saveIntensity(string fileName) {
 
   file << "DATASET STRUCTURED_POINTS" << endl;
   file << "DIMENSIONS " << nVoxel.x << " " << nVoxel.y << " " << nVoxel.z << endl;
-  file << "ORIGIN 0.0 0.0 0.0" << endl;
-  file << "SPACING " << voxelSize.x << " " << voxelSize.y << " " << voxelSize.z << endl;
+  file << "ORIGIN " << -0.5*voxelFFTSize.x*nVoxel.x << " " << -0.5*voxelFFTSize.y*nVoxel.y << " " << -0.5*voxelFFTSize.z*nVoxel.z <<  endl;
+  file << "SPACING " << voxelFFTSize.x << " " << voxelFFTSize.y << " " << voxelFFTSize.z << endl;
 
   // data block
 
@@ -87,6 +87,133 @@ void Structure::saveIntensity(string fileName) {
         file << intensity[i][j][k] << endl;
 
   file.close();
+}
+
+void Structure::ewaldSphere(XYZ kIn, string fileName) {
+  
+  double r = kIn.length();
+
+  vector<XYZ> voxels;
+  vector<double> voxelData;
+
+  // find voxelised sphere
+
+  for (int i = 0; i < nVoxel.x; i++)
+    for (int j = 0; j < nVoxel.y; j++)
+      for (int k = 0; k < nVoxel.z; k++) {
+        
+        double x = (i - 0.5*nVoxel.x)*voxelFFTSize.x;
+        double y = (j - 0.5*nVoxel.y)*voxelFFTSize.y;
+        double z = (k - 0.5*nVoxel.z)*voxelFFTSize.z;
+        XYZ pos(x, y, z);
+        
+        double d = (pos - kIn).length();
+        double dMin = d;
+        double dMax = d;
+
+        // check all vertices of each voxel
+        
+        double dTemp;
+
+        XYZ posZ = pos + XYZ(0.0, 0.0, voxelFFTSize.z);
+        dTemp = (posZ - kIn).length();
+        if (dTemp < dMin) dMin = dTemp;
+        else if (dTemp > dMax) dMax = dTemp;
+        
+        XYZ posY = pos + XYZ(0.0, voxelFFTSize.y, 0.0);
+        dTemp = (posY - kIn).length();
+        if (dTemp < dMin) dMin = dTemp;
+        else if (dTemp > dMax) dMax = dTemp;
+ 
+        XYZ posYZ = pos + XYZ(0.0, voxelFFTSize.y, voxelFFTSize.z);
+        dTemp = (posYZ - kIn).length();
+        if (dTemp < dMin) dMin = dTemp;
+        else if (dTemp > dMax) dMax = dTemp;
+        
+        XYZ posX = pos + XYZ(voxelFFTSize.x, 0.0, 0.0);
+        dTemp = (posX - kIn).length();
+        if (dTemp < dMin) dMin = dTemp;
+        else if (dTemp > dMax) dMax = dTemp;
+        
+        XYZ posXZ = pos + XYZ(voxelFFTSize.x, 0.0, voxelFFTSize.z);
+        dTemp = (posXZ - kIn).length();
+        if (dTemp < dMin) dMin = dTemp;
+        else if (dTemp > dMax) dMax = dTemp;
+        
+        XYZ posXY = pos + XYZ(voxelFFTSize.x, voxelFFTSize.y, 0.0);
+        dTemp = (posXY - kIn).length();
+        if (dTemp < dMin) dMin = dTemp;
+        else if (dTemp > dMax) dMax = dTemp;
+        
+        XYZ posXYZ = pos + XYZ(voxelFFTSize.x, voxelFFTSize.y, voxelFFTSize.z);
+        dTemp = (posXYZ - kIn).length();
+        if (dTemp < dMin) dMin = dTemp;
+        else if (dTemp > dMax) dMax = dTemp;
+
+        // if voxel intersects Ewald sphere, add voxel to data in correct order
+
+        if (dMin <= r && r <= dMax) {
+          voxels.push_back(pos);
+          voxels.push_back(posX);
+          voxels.push_back(posY);
+          voxels.push_back(posXY);
+          voxels.push_back(posZ);
+          voxels.push_back(posXZ);
+          voxels.push_back(posYZ);
+          voxels.push_back(posXYZ);
+
+          voxelData.push_back(intensity[i][j][k]);
+        }
+      }
+
+  // output Ewald sphere to file
+  
+  ofstream file(fileName);
+
+  // VTK file header
+
+  file << "# vtk DataFile Version 4.2" << endl;
+  file << "Ewald sphere voxel data" << endl;
+  file << "ASCII" << endl;
+
+  // define data structure
+
+  file << "DATASET UNSTRUCTURED_GRID" << endl;
+
+  // cell points
+
+  file << "POINTS " << voxels.size() << " FLOAT" << endl;
+
+  for (int i = 0; i < voxels.size(); i++)
+    file << voxels[i].x << " " << voxels[i].y << " " << voxels[i].z << endl;
+
+  // cell definitions
+
+  file << "CELLS " << voxels.size()/8 << " " << 9*voxels.size()/8 << endl;
+
+  for (int i = 0; i < voxels.size() / 8; i++) {
+    file << "8 ";
+    for (int j = 0; j < 8; j++)
+      file << 8*i + j << " ";
+    file << endl;
+  }
+
+  file << "CELL_TYPES " << voxels.size() / 8 << endl;
+
+  for (int i = 0; i < voxels.size() / 8; i++)
+    file << 11 << endl;
+
+  // data block
+
+  file << "CELL_DATA " << voxelData.size() << endl;
+  file << "SCALARS INTENSITY FLOAT 1" << endl;
+  file << "LOOKUP_TABLE INTENSITY" << endl;
+
+  for (int i = 0; i < voxelData.size(); i++)
+    file << voxelData[i] << endl;
+
+  file.close();
+
 }
 
 double Structure::distance(Tube tube1, Tube tube2, double lambda1, double lambda2) {
@@ -277,13 +404,15 @@ void Structure::voxelise() {
     }
   }
 
-  // translate points to voxelised charge density
+  // calculate voxel sizes
 
   double voxelSizeX = boxSize.x / nVoxel.x;
   double voxelSizeY = boxSize.y / nVoxel.y;
   double voxelSizeZ = boxSize.z / nVoxel.z;
 
   voxelSize = XYZ(voxelSizeX, voxelSizeY, voxelSizeZ);
+  
+  // voxelise density
 
   density = vector<vector<vector<double>>>(nVoxel.x, vector<vector<double>>(nVoxel.y, vector<double>(nVoxel.z, 0.0)));
 
@@ -299,7 +428,15 @@ void Structure::voxelise() {
 }
 
 void Structure::fft() {
+
+  // calculate reciprocal voxel sizes;
   
+  double voxelFFTSizeX = 1.0 / voxelSize.x;
+  double voxelFFTSizeY = 1.0 / voxelSize.y;
+  double voxelFFTSizeZ = 1.0 / voxelSize.z;
+
+  voxelFFTSize = XYZ(voxelFFTSizeX, voxelFFTSizeY, voxelFFTSizeZ);
+
   // setup fft procedure
   
   vector<double> densityUnwrapped(int(nVoxel.x*nVoxel.y*nVoxel.z), 0.0);
@@ -336,7 +473,6 @@ void Structure::fft() {
       } 
 
   // wrap fft around and center at origin
-
   
   vector<vector<vector<double>>> intensityCentred(nVoxel.x, vector<vector<double>>(nVoxel.y, vector<double>(nVoxel.z, 0.0)));
   
