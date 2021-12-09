@@ -20,11 +20,20 @@ class Structure{
   
   public:
    
-    Structure(int, vector<int>, vector<double>, XYZ, XYZ, XYZ, XYZ, bool);
+    Structure(int, vector<int>, vector<double>, XYZ, XYZ, XYZ, XYZ, int, bool);
+    
+    vector<vector<vector<double>>> density;
+    vector<vector<vector<double>>> intensity;
+
+    vector<vector<double>> density2D;
+    vector<vector<double>> intensity2D;
+    
     void savePoints(string);
     void saveDensity(string);
     void saveIntensity(string);
     void ewaldSphere(XYZ, string);
+    
+    vector<double> intensityDistribution2D(double, int);
 
   private:
 
@@ -48,17 +57,11 @@ class Structure{
     vector<Tube> tubes;
     vector<Tube> ghostTubes;
     vector<XYZ> points;
-    
-    vector<vector<vector<double>>> density;
-    vector<vector<vector<double>>> intensity;
-
-    vector<vector<double>> density2D;
-    vector<vector<double>> intensity2D;
-
+     
     double distance(Tube, Tube, double, double);
     bool checkOverlap(Tube);
 
-    void generate();
+    void generate(int);
     void voxelise();
     void fft();
 };

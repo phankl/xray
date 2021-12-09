@@ -1,6 +1,6 @@
 #include "structure.h"
 
-Structure::Structure(int nTubeNew, vector<int> rasterProperties, vector<double> tubeProperties, XYZ boxSizeNew, XYZ nVoxelNew, XYZ meanNew, XYZ stdNew, bool saxsNew):
+Structure::Structure(int nTubeNew, vector<int> rasterProperties, vector<double> tubeProperties, XYZ boxSizeNew, XYZ nVoxelNew, XYZ meanNew, XYZ stdNew, int seed, bool saxsNew):
   nTube(nTubeNew),
   rTube(tubeProperties[0]),
   lTube(tubeProperties[1]),
@@ -12,7 +12,7 @@ Structure::Structure(int nTubeNew, vector<int> rasterProperties, vector<double> 
   std(stdNew),
   saxs(saxsNew)
 {
-  generate();
+  generate(seed);
   voxelise();
   fft();
 }
@@ -279,6 +279,57 @@ void Structure::ewaldSphere(XYZ kIn, string fileName) {
 
 }
 
+vector<double> Structure::intensityDistribution2D(double radius, int nBins) {
+  
+  vector<double> result(nBins, 0.0);
+  vector<int> binCount(nBins, 0);
+  double binSize = 6.28318530718 / nBins;
+
+  for (int i = 0; i < nVoxel.x; i++)
+    for (int j = 0; j < nVoxel.z; j++) {
+      double x = (i - 0.5*nVoxel.x)*voxelFFTSize.x;
+      double z = (j - 0.5*nVoxel.z)*voxelFFTSize.z;
+    
+      double d = x*x + z*z;
+      double dMin = d;
+      double dMax = d;
+
+      // check all vertices of pixel
+
+      d = x*x + pow(z+voxelFFTSize.z, 2);
+      if (d < dMin) dMin = d;
+      if (d > dMax) dMax = d;
+      
+      d = pow(x+voxelFFTSize.x, 2) + z*z;
+      if (d < dMin) dMin = d;
+      if (d > dMax) dMax = d;
+      
+      d = pow(x+voxelFFTSize.x, 2) + pow(z+voxelFFTSize.z, 2);
+      if (d < dMin) dMin = d;
+      if (d > dMax) dMax = d;
+
+      // add intensity to bin if pixel contains desired contour
+
+      if (dMin < radius*radius && radius*radius < dMax) {
+
+        double xCentre = x + 0.5*voxelFFTSize.x;
+        double zCentre = z + 0.5*voxelFFTSize.z;
+
+        double angle = -atan2(zCentre, xCentre) + 4.71238898038;
+        if (angle > 6.28318530718) angle -= 6.28318530718;
+        int bin = floor(angle / binSize);
+        result[bin] += intensity2D[i][j];
+        binCount[bin]++;
+      }
+    }
+
+  for (int i = 0; i < nBins; i++)
+    result[i] /= binCount[i];
+
+  return result;
+}
+
+
 double Structure::distance(Tube tube1, Tube tube2, double lambda1, double lambda2) {
   return (tube1.s - tube2.s + lambda1*tube1.t - lambda2*tube2.t).length();
 }
@@ -376,9 +427,9 @@ bool Structure::checkOverlap(Tube tube1) {
   return false;
 }
 
-void Structure::generate() {
+void Structure::generate(int seed) {
 
-  mt19937_64 generator(2021);
+  mt19937_64 generator(seed);
   generator.discard(10000);
 
   uniform_real_distribution<double> sDistribution(0.0, 1.0);
@@ -450,7 +501,7 @@ void Structure::generate() {
 
     if (!checkOverlap(tube) && !ghostOverlap) {
       
-      cout << "Tube " << tubeIndex << " generated after " << attempts << " attempts." << endl;
+      // cout << "Tube " << tubeIndex << " generated after " << attempts << " attempts." << endl;
       attempts = 0;
       tubes.push_back(tube);
       ghostTubes.push_back(tube);
@@ -581,9 +632,9 @@ void Structure::fft() {
 
   // calculate reciprocal voxel sizes;
   
-  double voxelFFTSizeX = 1.0 / voxelSize.x;
-  double voxelFFTSizeY = 1.0 / voxelSize.y;
-  double voxelFFTSizeZ = 1.0 / voxelSize.z;
+  double voxelFFTSizeX = 6.28318530718 / boxSize.x;
+  double voxelFFTSizeY = 6.28318530718 / boxSize.y;
+  double voxelFFTSizeZ = 6.28318530718 / boxSize.z;
 
   voxelFFTSize = XYZ(voxelFFTSizeX, voxelFFTSizeY, voxelFFTSizeZ);
 
