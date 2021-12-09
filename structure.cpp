@@ -1,6 +1,6 @@
 #include "structure.h"
 
-Structure::Structure(int nTubeNew, vector<int> rasterProperties, vector<double> tubeProperties, XYZ boxSizeNew, XYZ nVoxelNew, XYZ meanNew, XYZ stdNew):
+Structure::Structure(int nTubeNew, vector<int> rasterProperties, vector<double> tubeProperties, XYZ boxSizeNew, XYZ nVoxelNew, XYZ meanNew, XYZ stdNew, bool saxsNew):
   nTube(nTubeNew),
   rTube(tubeProperties[0]),
   lTube(tubeProperties[1]),
@@ -9,7 +9,8 @@ Structure::Structure(int nTubeNew, vector<int> rasterProperties, vector<double> 
   boxSize(boxSizeNew),
   nVoxel(nVoxelNew),
   mean(meanNew),
-  std(stdNew)
+  std(stdNew),
+  saxs(saxsNew)
 {
   generate();
   voxelise();
@@ -32,29 +33,57 @@ void Structure::savePoints(string fileName) {
 void Structure::saveDensity(string fileName) {
   ofstream file(fileName);
 
-  // VTK file header
+  if (saxs) {
+    
+    // VTK file header
 
-  file << "# vtk DataFile Version 4.2" << endl;
-  file << "Charge density voxel data" << endl;
-  file << "ASCII" << endl;
+    file << "# vtk DataFile Version 4.2" << endl;
+    file << "Charge density voxel data" << endl;
+    file << "ASCII" << endl;
 
-  // define data structure
+    // define data structure
 
-  file << "DATASET STRUCTURED_POINTS" << endl;
-  file << "DIMENSIONS " << nVoxel.x << " " << nVoxel.y << " " << nVoxel.z << endl;
-  file << "ORIGIN 0.0 0.0 0.0" << endl;
-  file << "SPACING " << voxelSize.x << " " << voxelSize.y << " " << voxelSize.z << endl;
+    file << "DATASET STRUCTURED_POINTS" << endl;
+    file << "DIMENSIONS " << nVoxel.x << " 1 " << nVoxel.z << endl;
+    file << "ORIGIN 0.0 0.0 0.0" << endl;
+    file << "SPACING " << voxelSize.x << " 0.0 " << voxelSize.z << endl;
 
-  // data block
+    // data block
 
-  file << "POINT_DATA " << int(nVoxel.x * nVoxel.y * nVoxel.z) << endl;
-  file << "SCALARS DENSITY FLOAT 1" << endl;
-  file << "LOOKUP_TABLE DENSITY" << endl;
+    file << "POINT_DATA " << int(nVoxel.x * nVoxel.z) << endl;
+    file << "SCALARS DENSITY FLOAT 1" << endl;
+    file << "LOOKUP_TABLE DENSITY" << endl;
 
-  for (int k = 0; k < nVoxel.z; k++)
-    for (int j = 0; j < nVoxel.y; j++)
-      for (int i = 0; i < nVoxel.z; i++)
-        file << density[i][j][k] << endl;
+    for (int j = 0; j < nVoxel.z; j++)
+      for (int i = 0; i < nVoxel.x; i++)
+        file << density2D[i][j] << endl;
+  }
+  else {
+
+    // VTK file header
+
+    file << "# vtk DataFile Version 4.2" << endl;
+    file << "Charge density voxel data" << endl;
+    file << "ASCII" << endl;
+
+    // define data structure
+
+    file << "DATASET STRUCTURED_POINTS" << endl;
+    file << "DIMENSIONS " << nVoxel.x << " " << nVoxel.y << " " << nVoxel.z << endl;
+    file << "ORIGIN 0.0 0.0 0.0" << endl;
+    file << "SPACING " << voxelSize.x << " " << voxelSize.y << " " << voxelSize.z << endl;
+
+    // data block
+
+    file << "POINT_DATA " << int(nVoxel.x * nVoxel.y * nVoxel.z) << endl;
+    file << "SCALARS DENSITY FLOAT 1" << endl;
+    file << "LOOKUP_TABLE DENSITY" << endl;
+
+    for (int k = 0; k < nVoxel.z; k++)
+      for (int j = 0; j < nVoxel.y; j++)
+        for (int i = 0; i < nVoxel.z; i++)
+          file << density[i][j][k] << endl;
+  }
 
   file.close();
 }
@@ -62,35 +91,69 @@ void Structure::saveDensity(string fileName) {
 void Structure::saveIntensity(string fileName) {
   ofstream file(fileName);
 
-  // VTK file header
+  if (saxs) {
+    
+    // VTK file header
 
-  file << "# vtk DataFile Version 4.2" << endl;
-  file << "X-ray intensity voxel data" << endl;
-  file << "ASCII" << endl;
+    file << "# vtk DataFile Version 4.2" << endl;
+    file << "X-ray intensity voxel data" << endl;
+    file << "ASCII" << endl;
 
-  // define data structure
+    // define data structure
 
-  file << "DATASET STRUCTURED_POINTS" << endl;
-  file << "DIMENSIONS " << nVoxel.x << " " << nVoxel.y << " " << nVoxel.z << endl;
-  file << "ORIGIN " << -0.5*voxelFFTSize.x*nVoxel.x << " " << -0.5*voxelFFTSize.y*nVoxel.y << " " << -0.5*voxelFFTSize.z*nVoxel.z <<  endl;
-  file << "SPACING " << voxelFFTSize.x << " " << voxelFFTSize.y << " " << voxelFFTSize.z << endl;
+    file << "DATASET STRUCTURED_POINTS" << endl;
+    file << "DIMENSIONS " << nVoxel.x << " 1 " << nVoxel.z << endl;
+    file << "ORIGIN " << -0.5*voxelFFTSize.x*nVoxel.x << " 0.0 " << -0.5*voxelFFTSize.z*nVoxel.z <<  endl;
+    file << "SPACING " << voxelFFTSize.x << " 0.0 " << voxelFFTSize.z << endl;
 
-  // data block
+    // data block
 
-  file << "POINT_DATA " << int(nVoxel.x * nVoxel.y * nVoxel.z) << endl;
-  file << "SCALARS INTENSITY FLOAT 1" << endl;
-  file << "LOOKUP_TABLE INTENSITY" << endl;
+    file << "POINT_DATA " << int(nVoxel.x * nVoxel.z) << endl;
+    file << "SCALARS INTENSITY FLOAT 1" << endl;
+    file << "LOOKUP_TABLE INTENSITY" << endl;
 
-  for (int k = 0; k < nVoxel.z; k++)
-    for (int j = 0; j < nVoxel.y; j++)
+    for (int j = 0; j < nVoxel.z; j++)
       for (int i = 0; i < nVoxel.z; i++)
-        file << intensity[i][j][k] << endl;
+        file << intensity2D[i][j] << endl;
+
+  }
+  else {
+
+    // VTK file header
+
+    file << "# vtk DataFile Version 4.2" << endl;
+    file << "X-ray intensity voxel data" << endl;
+    file << "ASCII" << endl;
+
+    // define data structure
+
+    file << "DATASET STRUCTURED_POINTS" << endl;
+    file << "DIMENSIONS " << nVoxel.x << " " << nVoxel.y << " " << nVoxel.z << endl;
+    file << "ORIGIN " << -0.5*voxelFFTSize.x*nVoxel.x << " " << -0.5*voxelFFTSize.y*nVoxel.y << " " << -0.5*voxelFFTSize.z*nVoxel.z <<  endl;
+    file << "SPACING " << voxelFFTSize.x << " " << voxelFFTSize.y << " " << voxelFFTSize.z << endl;
+
+    // data block
+
+    file << "POINT_DATA " << int(nVoxel.x * nVoxel.y * nVoxel.z) << endl;
+    file << "SCALARS INTENSITY FLOAT 1" << endl;
+    file << "LOOKUP_TABLE INTENSITY" << endl;
+
+    for (int k = 0; k < nVoxel.z; k++)
+      for (int j = 0; j < nVoxel.y; j++)
+        for (int i = 0; i < nVoxel.z; i++)
+          file << intensity[i][j][k] << endl;
+  }
 
   file.close();
 }
 
 void Structure::ewaldSphere(XYZ kIn, string fileName) {
   
+  if (saxs) {
+    cout << "Ewald sphere not used for SAXS simulation!" << endl;
+    return;
+  }
+
   double r = kIn.length();
 
   vector<XYZ> voxels;
@@ -228,9 +291,9 @@ bool Structure::checkOverlap(Tube tube1) {
   XYZ t1 = tube1.t;
   XYZ s1 = tube1.s;
 
-  for (int i = 0; i < tubes.size(); i++) {   
+  for (int i = 0; i < ghostTubes.size(); i++) {   
     
-    Tube tube2 = tubes[i];
+    Tube tube2 = ghostTubes[i];
     
     double r2 = tube2.r;
     double l2 = tube2.l;
@@ -337,23 +400,95 @@ void Structure::generate() {
     double tX = tDistributionX(generator);
     double tY = tDistributionY(generator);
     double tZ = tDistributionZ(generator);
-  
+ 
+    // if (sDistribution(generator) < 0.5) tZ *= -1.0;
+
     XYZ s(sX, sY, sZ);
     XYZ t(tX, tY, tZ);
 
     t.normalise();
 
     Tube tube(rTube, lTube, s, t);
+    
+    // check periodic boundary conditions and create secondary ghost tube for trial
+
+    XYZ eTemp = s + lTube*t;
+    XYZ sTemp = s;
+    
+    bool ghost = false;
+
+    if (eTemp.x < 0.0) {
+      sTemp.x += boxSize.x;
+      ghost = true;
+    }
+    if (eTemp.y < 0.0) {
+      sTemp.y += boxSize.y; 
+      ghost = true;
+    }
+    if (eTemp.z < 0.0) {
+      sTemp.z += boxSize.z; 
+      ghost = true;
+    }
+    if (eTemp.x > boxSize.x) {
+      sTemp.x -= boxSize.x;
+      ghost = true;
+    }
+    if (eTemp.y > boxSize.y) {
+      sTemp.y -= boxSize.y;
+      ghost = true;
+    }
+    if (eTemp.z > boxSize.z) {
+      sTemp.z -= boxSize.z;
+      ghost = true;
+    }
 
     attempts++;
 
     // add new tube if no overlap is detected
 
-    if (!checkOverlap(tube)) {
+    bool ghostOverlap = (ghost) ? checkOverlap(Tube(rTube, lTube, sTemp, t)) : false;
+
+    if (!checkOverlap(tube) && !ghostOverlap) {
+      
       cout << "Tube " << tubeIndex << " generated after " << attempts << " attempts." << endl;
       attempts = 0;
       tubes.push_back(tube);
+      ghostTubes.push_back(tube);
       tubeIndex++;
+
+      // check periodic boundary conditions and add ghost tube if boundary is crossed
+      
+      XYZ eTemp = s + lTube*t;
+      XYZ sTemp = s;
+      
+      bool ghost = false;
+
+      if (eTemp.x < 0.0) {
+        sTemp.x += boxSize.x;
+        ghost = true;
+      }
+      if (eTemp.y < 0.0) {
+        sTemp.y += boxSize.y; 
+        ghost = true;
+      }
+      if (eTemp.z < 0.0) {
+        sTemp.z += boxSize.z; 
+        ghost = true;
+      }
+      if (eTemp.x > boxSize.x) {
+        sTemp.x -= boxSize.x;
+        ghost = true;
+      }
+      if (eTemp.y > boxSize.y) {
+        sTemp.y -= boxSize.y;
+        ghost = true;
+      }
+      if (eTemp.z > boxSize.z) {
+        sTemp.z -= boxSize.z;
+        ghost = true;
+      }
+
+      if (ghost) ghostTubes.push_back(Tube(rTube, lTube, sTemp, t));
     }
   }
 }
@@ -414,16 +549,31 @@ void Structure::voxelise() {
   
   // voxelise density
 
-  density = vector<vector<vector<double>>>(nVoxel.x, vector<vector<double>>(nVoxel.y, vector<double>(nVoxel.z, 0.0)));
+  if (saxs) {
+    density2D = vector<vector<double>>(nVoxel.x, vector<double>(nVoxel.z, 0.0));
 
-  for (int i = 0; i < points.size(); i++) {
-    XYZ point = points[i];
+    for (int i = 0; i < points.size(); i++) {
+      XYZ point = points[i];
+      
+      int indexX = floor(point.x / voxelSizeX);
+      int indexZ = floor(point.z / voxelSizeZ);
 
-    int indexX = floor(point.x / voxelSizeX);
-    int indexY = floor(point.y / voxelSizeY);
-    int indexZ = floor(point.z / voxelSizeZ);
-  
-    density[indexX][indexY][indexZ] += 1.0;
+      density2D[indexX][indexZ] += 1.0;
+    }
+  }
+  else {
+
+    density = vector<vector<vector<double>>>(nVoxel.x, vector<vector<double>>(nVoxel.y, vector<double>(nVoxel.z, 0.0)));
+
+    for (int i = 0; i < points.size(); i++) {
+      XYZ point = points[i];
+
+      int indexX = floor(point.x / voxelSizeX);
+      int indexY = floor(point.y / voxelSizeY);
+      int indexZ = floor(point.z / voxelSizeZ);
+    
+      density[indexX][indexY][indexZ] += 1.0;
+    }
   }
 }
 
@@ -437,58 +587,114 @@ void Structure::fft() {
 
   voxelFFTSize = XYZ(voxelFFTSizeX, voxelFFTSizeY, voxelFFTSizeZ);
 
-  // setup fft procedure
-  
-  vector<double> densityUnwrapped(int(nVoxel.x*nVoxel.y*nVoxel.z), 0.0);
-  vector<complex<double>> amplitudeUnwrapped(int(nVoxel.x*nVoxel.y)*(int(nVoxel.z)/2 + 1), {0.0, 0.0});
-  fftw_complex *fftwAmplitudeUnwrapped = reinterpret_cast<fftw_complex*>(&amplitudeUnwrapped[0]);
+  if (saxs) {
+    
+    // setup fft procedure
+    
+    vector<double> densityUnwrapped(int(nVoxel.x*nVoxel.z), 0.0);
+    vector<complex<double>> amplitudeUnwrapped(int(nVoxel.x)*(int(nVoxel.z)/2 + 1), {0.0, 0.0});
+    fftw_complex *fftwAmplitudeUnwrapped = reinterpret_cast<fftw_complex*>(&amplitudeUnwrapped[0]);
 
-  fftw_plan plan = fftw_plan_dft_r2c_3d(int(nVoxel.x), int(nVoxel.y), int(nVoxel.z), &densityUnwrapped[0], fftwAmplitudeUnwrapped, FFTW_ESTIMATE);
+    fftw_plan plan = fftw_plan_dft_r2c_2d(int(nVoxel.x), int(nVoxel.z), &densityUnwrapped[0], fftwAmplitudeUnwrapped, FFTW_ESTIMATE);
 
-  // unwrap density data to 1D vector
+    // unwrap density data to 1D vector
 
-  for (int i = 0; i < nVoxel.x; i++)
-    for (int j = 0; j < nVoxel.y; j++)
-      for (int k = 0; k < nVoxel.z; k++)
-        densityUnwrapped[i*int(nVoxel.y)*int(nVoxel.z) + j*int(nVoxel.z) + k] = density[i][j][k];
+    for (int i = 0; i < nVoxel.x; i++)
+      for (int j = 0; j < nVoxel.z; j++)
+        densityUnwrapped[i*int(nVoxel.z) + j] = density2D[i][j];
 
-  // run fft and clean up
+    // run fft and clean up
 
-  fftw_execute(plan);
-  fftw_destroy_plan(plan);
+    fftw_execute(plan);
+    fftw_destroy_plan(plan);
 
-  // calculate intensity and wrap up into 3d vector
+    // calculate intensity and wrap up into 3d vector
 
-  intensity = vector<vector<vector<double>>>(nVoxel.x, vector<vector<double>>(nVoxel.y, vector<double>(nVoxel.z, 0.0)));
-  
-  int nVoxelZTemp = int(nVoxel.z/2) + 1;
+    intensity2D = vector<vector<double>>(nVoxel.x, vector<double>(nVoxel.z, 0.0));
+    
+    int nVoxelZTemp = int(nVoxel.z/2) + 1;
 
-  for (int i = 0; i < nVoxel.x; i++)
-    for (int j = 0; j < nVoxel.y; j++)
-      for (int k = 0; k < nVoxel.z; k++) {
-        int kTemp = k;
-        if (k > int(nVoxel.z)/2) kTemp = int(nVoxel.z) - k - 1;
-        int index = i*int(nVoxel.y)*nVoxelZTemp + j*nVoxelZTemp + kTemp;
-        intensity[i][j][k] = norm(amplitudeUnwrapped[index]);
+    for (int i = 0; i < nVoxel.x; i++)
+      for (int j = 0; j < nVoxel.z; j++) {
+        int jTemp = j;
+        if (j > int(nVoxel.z)/2) jTemp = int(nVoxel.z) - j - 1;
+        int index = i*nVoxelZTemp + jTemp;
+        intensity2D[i][j] = norm(amplitudeUnwrapped[index]);
       } 
 
-  // wrap fft around and center at origin
-  
-  vector<vector<vector<double>>> intensityCentred(nVoxel.x, vector<vector<double>>(nVoxel.y, vector<double>(nVoxel.z, 0.0)));
-  
-  for (int i = 0; i < nVoxel.x; i++)
-    for (int j = 0; j < nVoxel.y; j++)
-      for (int k = 0; k < nVoxel.y; k++) {
+    // wrap fft around and center at origin
+    
+    vector<vector<double>> intensityCentred(nVoxel.x, vector<double>(nVoxel.z, 0.0));
+    
+    for (int i = 0; i < nVoxel.x; i++)
+      for (int j = 0; j < nVoxel.z; j++) {
         int iTemp, jTemp, kTemp;
         if (i > nVoxel.x/2) iTemp = i - int(nVoxel.x)/2;
         else iTemp = i + int(nVoxel.x)/2 - 1;
-        if (j > nVoxel.y/2) jTemp = j - int(nVoxel.y)/2;
-        else jTemp = j + int(nVoxel.y)/2 - 1;
-        if (k > nVoxel.z/2) kTemp = k - int(nVoxel.z)/2;
-        else kTemp = k + int(nVoxel.z)/2 - 1;
+        if (j > nVoxel.z/2) jTemp = j - int(nVoxel.z)/2;
+        else jTemp = j + int(nVoxel.z)/2 - 1;
       
-        intensityCentred[i][j][k] = intensity[iTemp][jTemp][kTemp];
+        intensityCentred[i][j] = intensity2D[iTemp][jTemp];
       }
 
-  intensity = intensityCentred;
+    intensity2D = intensityCentred;
+
+  }
+  else {
+
+    // setup fft procedure
+    
+    vector<double> densityUnwrapped(int(nVoxel.x*nVoxel.y*nVoxel.z), 0.0);
+    vector<complex<double>> amplitudeUnwrapped(int(nVoxel.x*nVoxel.y)*(int(nVoxel.z)/2 + 1), {0.0, 0.0});
+    fftw_complex *fftwAmplitudeUnwrapped = reinterpret_cast<fftw_complex*>(&amplitudeUnwrapped[0]);
+
+    fftw_plan plan = fftw_plan_dft_r2c_3d(int(nVoxel.x), int(nVoxel.y), int(nVoxel.z), &densityUnwrapped[0], fftwAmplitudeUnwrapped, FFTW_ESTIMATE);
+
+    // unwrap density data to 1D vector
+
+    for (int i = 0; i < nVoxel.x; i++)
+      for (int j = 0; j < nVoxel.y; j++)
+        for (int k = 0; k < nVoxel.z; k++)
+          densityUnwrapped[i*int(nVoxel.y)*int(nVoxel.z) + j*int(nVoxel.z) + k] = density[i][j][k];
+
+    // run fft and clean up
+
+    fftw_execute(plan);
+    fftw_destroy_plan(plan);
+
+    // calculate intensity and wrap up into 3d vector
+
+    intensity = vector<vector<vector<double>>>(nVoxel.x, vector<vector<double>>(nVoxel.y, vector<double>(nVoxel.z, 0.0)));
+    
+    int nVoxelZTemp = int(nVoxel.z/2) + 1;
+
+    for (int i = 0; i < nVoxel.x; i++)
+      for (int j = 0; j < nVoxel.y; j++)
+        for (int k = 0; k < nVoxel.z; k++) {
+          int kTemp = k;
+          if (k > int(nVoxel.z)/2) kTemp = int(nVoxel.z) - k - 1;
+          int index = i*int(nVoxel.y)*nVoxelZTemp + j*nVoxelZTemp + kTemp;
+          intensity[i][j][k] = norm(amplitudeUnwrapped[index]);
+        } 
+
+    // wrap fft around and center at origin
+    
+    vector<vector<vector<double>>> intensityCentred(nVoxel.x, vector<vector<double>>(nVoxel.y, vector<double>(nVoxel.z, 0.0)));
+    
+    for (int i = 0; i < nVoxel.x; i++)
+      for (int j = 0; j < nVoxel.y; j++)
+        for (int k = 0; k < nVoxel.z; k++) {
+          int iTemp, jTemp, kTemp;
+          if (i > nVoxel.x/2) iTemp = i - int(nVoxel.x)/2;
+          else iTemp = i + int(nVoxel.x)/2 - 1;
+          if (j > nVoxel.y/2) jTemp = j - int(nVoxel.y)/2;
+          else jTemp = j + int(nVoxel.y)/2 - 1;
+          if (k > nVoxel.z/2) kTemp = k - int(nVoxel.z)/2;
+          else kTemp = k + int(nVoxel.z)/2 - 1;
+        
+          intensityCentred[i][j][k] = intensity[iTemp][jTemp][kTemp];
+        }
+
+    intensity = intensityCentred;
+  }
 }

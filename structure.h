@@ -20,7 +20,7 @@ class Structure{
   
   public:
    
-    Structure(int, vector<int>, vector<double>, XYZ, XYZ, XYZ, XYZ);
+    Structure(int, vector<int>, vector<double>, XYZ, XYZ, XYZ, XYZ, bool);
     void savePoints(string);
     void saveDensity(string);
     void saveIntensity(string);
@@ -31,6 +31,8 @@ class Structure{
     int nTube;
     double rTube;
     double lTube;
+
+    bool saxs;
 
     XYZ boxSize;
     XYZ voxelSize;
@@ -44,9 +46,14 @@ class Structure{
     int phiPoints;
 
     vector<Tube> tubes;
+    vector<Tube> ghostTubes;
     vector<XYZ> points;
+    
     vector<vector<vector<double>>> density;
     vector<vector<vector<double>>> intensity;
+
+    vector<vector<double>> density2D;
+    vector<vector<double>> intensity2D;
 
     double distance(Tube, Tube, double, double);
     bool checkOverlap(Tube);
