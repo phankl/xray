@@ -283,7 +283,7 @@ vector<double> Structure::intensityDistribution2D(double radius, int nBins) {
   
   vector<double> result(nBins, 0.0);
   vector<int> binCount(nBins, 0);
-  double binSize = 6.28318530718 / nBins;
+  double binSize = 2.0 * numbers::pi / nBins;
 
   for (int i = 0; i < nVoxel.x; i++)
     for (int j = 0; j < nVoxel.z; j++) {
@@ -315,8 +315,8 @@ vector<double> Structure::intensityDistribution2D(double radius, int nBins) {
         double xCentre = x + 0.5*voxelFFTSize.x;
         double zCentre = z + 0.5*voxelFFTSize.z;
 
-        double angle = -atan2(zCentre, xCentre) + 4.71238898038;
-        if (angle > 6.28318530718) angle -= 6.28318530718;
+        double angle = -atan2(zCentre, xCentre) + 1.5*numbers::pi;
+        if (angle > 2.0 * numbers::pi) angle -= 2.0 * numbers::pi;
         int bin = floor(angle / binSize);
         result[bin] += intensity2D[i][j];
         binCount[bin]++;
@@ -632,9 +632,9 @@ void Structure::fft() {
 
   // calculate reciprocal voxel sizes;
   
-  double voxelFFTSizeX = 6.28318530718 / boxSize.x;
-  double voxelFFTSizeY = 6.28318530718 / boxSize.y;
-  double voxelFFTSizeZ = 6.28318530718 / boxSize.z;
+  double voxelFFTSizeX = 2.0 * numbers::pi / boxSize.x;
+  double voxelFFTSizeY = 2.0 * numbers::pi / boxSize.y;
+  double voxelFFTSizeZ = 2.0 * numbers::pi / boxSize.z;
 
   voxelFFTSize = XYZ(voxelFFTSizeX, voxelFFTSizeY, voxelFFTSizeZ);
 
@@ -659,7 +659,7 @@ void Structure::fft() {
     fftw_execute(plan);
     fftw_destroy_plan(plan);
 
-    // calculate intensity and wrap up into 3d vector
+    // calculate intensity and wrap up into 2d vector
 
     intensity2D = vector<vector<double>>(nVoxel.x, vector<double>(nVoxel.z, 0.0));
     

@@ -6,13 +6,19 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <numbers>
+
+#include <complex>
+#include <fftw3.h>
 
 using namespace std;
 
-vector<double> moments(vector<double>, int);
+long double binomial(int, int);
+
+vector<double> moments(vector<double>);
 
 vector<vector<double>> projectionMatrix(int);
-vector<vector<double>> forwardSubstitution(vector<vector<double>>);
+vector<double> backwardSubstitution(vector<vector<double>>, vector<double>);
 
 void save(vector<double>, vector<double>, string);
 

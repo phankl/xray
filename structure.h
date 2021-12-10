@@ -7,6 +7,7 @@
 #include <iomanip>
 #include <fstream>
 #include <string>
+#include <numbers>
 
 #include <complex>
 #include <fftw3.h>

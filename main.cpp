@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <numbers>
 
 #include "analysis.h"
 #include "structure.h"
@@ -14,7 +15,7 @@ int main() {
   vector<double> tubeProperties = {0.6785, 100.0};
   vector<int> rasterProperties = {20, 400};
   XYZ boxSize(1000.0, 1000.0, 1000.0);
-  XYZ voxelSize(5000, 5000, 5000);
+  XYZ voxelSize(1000, 1000, 1000);
   XYZ mean(0.0, 0.0, 5.0);
   XYZ std(1.0, 1.0, 1.0);
 
@@ -39,10 +40,12 @@ int main() {
   double qRadius = 0.5;
 
   int nBins = 100;
-  double angleSpacing2D = 6.28318530718 / nBins;
+  double angleSpacing2D = 2.0 * numbers::pi / nBins;
   vector<double> angles2D(nBins, 0.0);
   for (int i = 0; i < nBins; i++) angles2D[i] = (i+0.5) * angleSpacing2D;
   
+  // converging distribution
+
   int nStructure = 100;
   vector<double> intensityDistribution2D(nBins, 0.0);
   vector<vector<double>> intensity2D(voxelSize.x, vector<double>(voxelSize.z, 0.0));
@@ -61,6 +64,12 @@ int main() {
   structure.intensity2D = intensity2D;
   structure.saveIntensity("intensity2D.vtk");
   save(angles2D, intensityDistribution2D, "intensityDistribution2D.dat");
+
+  // moment calculation and inverse projection
+
+  vector<double> moments2D = moments(intensityDistribution2D);
+  vector<vector<double>> projection = projectionMatrix(nBins/2 + 1);
+  vector<double> moments3D = backwardSubstitution(projection, moments2D);
 
   return 0;
 }
