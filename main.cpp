@@ -39,21 +39,31 @@ int main() {
 
   double qRadius = 0.5;
 
-  int nBins = 100;
+  int nBins = 200;
   double angleSpacing2D = 2.0 * numbers::pi / nBins;
+  double angleSpacing3D = numbers::pi / nBins;
   vector<double> angles2D(nBins, 0.0);
-  for (int i = 0; i < nBins; i++) angles2D[i] = (i+0.5) * angleSpacing2D;
-  
+  vector<double> angles3D(nBins, 0.0);
+  for (int i = 0; i < nBins; i++) {
+    angles2D[i] = (i+0.5) * angleSpacing2D;
+    angles3D[i] = (i+0.5) * angleSpacing3D;
+  }
+
   // converging distribution
 
   int nStructure = 100;
   vector<double> intensityDistribution2D(nBins, 0.0);
+  vector<double> odf3D(nBins, 0.0);
   vector<vector<double>> intensity2D(voxelSize.x, vector<double>(voxelSize.z, 0.0));
  
   for (int i = 0; i < nStructure; i++) {
     Structure structure(nTube, rasterProperties, tubeProperties, boxSize, voxelSize, mean, std, i, true);
     vector<double> intensityTemp = structure.intensityDistribution2D(qRadius, nBins);
-    for (int j = 0; j < nBins; j++) intensityDistribution2D[j] += intensityTemp[j] / nStructure;
+    vector<double> odfTemp = structure.odf(nBins);
+    for (int j = 0; j < nBins; j++) {
+      intensityDistribution2D[j] += intensityTemp[j] / nStructure;
+      odf3D[j] += odfTemp[j] / nStructure;
+    }
     for (int j = 0; j < voxelSize.x; j++)
       for (int k = 0; k < voxelSize.z; k++)
         intensity2D[j][k] += structure.intensity2D[j][k] / nStructure;
@@ -64,6 +74,7 @@ int main() {
   structure.intensity2D = intensity2D;
   structure.saveIntensity("intensity2D.vtk");
   save(angles2D, intensityDistribution2D, "intensityDistribution2D.dat");
+  save(angles3D, odf3D, "odf.dat");
 
   // moment calculation and inverse projection
 

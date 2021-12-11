@@ -63,7 +63,7 @@ void Structure::saveDensity(string fileName) {
     // VTK file header
 
     file << "# vtk DataFile Version 4.2" << endl;
-    file << "Charge density voxel data" << endl;
+
     file << "ASCII" << endl;
 
     // define data structure
@@ -277,6 +277,28 @@ void Structure::ewaldSphere(XYZ kIn, string fileName) {
 
   file.close();
 
+}
+
+vector<double> Structure::odf(int nBins) {
+  
+  vector<double> result(nBins, 0.0);
+  double binSize = numbers::pi / nBins;
+
+  for (int i = 0; i < nTube; i++) {
+    XYZ t = tubes[i].t;
+    double angle = acos(t.z / t.length());
+    int bin = floor(angle / binSize);
+    result[bin] += 1.0;
+  }
+
+  double sum = 0.0;
+  for (int i = 0; i < nBins; i++)
+    sum += result[i] * binSize;
+
+  for (int i = 0; i < nBins; i++)
+    result[i] /= sin((i+0.5) * binSize) * sum;
+
+  return result;
 }
 
 vector<double> Structure::intensityDistribution2D(double radius, int nBins) {

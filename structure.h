@@ -33,7 +33,8 @@ class Structure{
     void saveDensity(string);
     void saveIntensity(string);
     void ewaldSphere(XYZ, string);
-    
+
+    vector<double> odf(int);
     vector<double> intensityDistribution2D(double, int);
 
   private:
