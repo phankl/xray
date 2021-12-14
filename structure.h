@@ -1,6 +1,7 @@
 #ifndef STRUCTURE_HEADER
 #define STRUCTURE_HEADER
 
+#include <cmath>
 #include <vector>
 #include <random>
 #include <iostream>
@@ -12,6 +13,7 @@
 #include <complex>
 #include <fftw3.h>
 
+#include "analysis.h"
 #include "tube.h"
 #include "xyz.h"
 
@@ -35,6 +37,7 @@ class Structure{
     void ewaldSphere(XYZ, string);
 
     vector<double> odf(int);
+    vector<double> intensityDistributionTube(double, int);
     vector<double> intensityDistribution2D(double, int);
 
   private:

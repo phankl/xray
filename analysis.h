@@ -14,8 +14,10 @@
 using namespace std;
 
 long double binomial(int, int);
+double sinc(double);
 
-vector<double> moments(vector<double>);
+vector<double> moments2D(vector<double>, int);
+vector<double> moments3D(vector<double>, int);
 
 vector<vector<double>> projectionMatrix(int);
 vector<double> backwardSubstitution(vector<vector<double>>, vector<double>);

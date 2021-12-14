@@ -5,15 +5,21 @@ long double binomial(int n, int k) {
   else return binomial(n-1, k-1) * n / k; 
 }
 
-vector<double> moments(vector<double> intensity) {
+double sinc(double x) {
+  if (x == 0.0) return 1.0;
+  return sin(x) / x;
+}
 
+vector<double> moments2D(vector<double> intensity, int nMoments) {
+
+  /*
   // calculate fourier coefficients of intensity distribution using fft
 
   // setup fft plan
 
   int n = intensity.size();
   vector<double> input(n, 0.0);
-  vector<complex<double>> resultComplex(n/2 + 1, {0.0, 0.0});
+  vector<complex<double>> resultComplex(n, {0.0, 0.0});
   fftw_complex *fftwResult = reinterpret_cast<fftw_complex*>(&resultComplex[0]);
 
   fftw_plan plan = fftw_plan_dft_r2c_1d(n, &input[0], fftwResult, FFTW_ESTIMATE);
@@ -26,8 +32,47 @@ vector<double> moments(vector<double> intensity) {
   
   // calculate moments
   
-  vector<double> result(n, 0.0);
-  for (int i = 0; i < n; i++) result[i] = 2.0 * numbers::pi * resultComplex[i].real() / n;
+  vector<double> result(nMoments, 0.0);
+  for (int i = 0; i < nMoments; i++) result[i] = 2.0 * numbers::pi * resultComplex[i].real() / n;
+   for (int i = nMoments-1; i >= 0; i--) result[i] /= result[0];
+  */
+  
+  vector<double> result(nMoments, 0.0);
+  double angleSpacing = 2.0 * numbers::pi / intensity.size();
+
+  for (int i = 0; i < nMoments; i++) {
+    double sum = 0.0;
+    for (int j = 0; j < intensity.size(); j++) {
+      double angle = (j+0.5) * angleSpacing;
+      sum += intensity[j] * cos(i * angle);
+    }
+    sum *= angleSpacing;
+    result[i] = sum;
+  }
+
+  for (int i = nMoments-1; i >= 0; i--)
+    result[i] /= result[0];
+
+  return result;
+}
+
+vector<double> moments3D(vector<double> intensity, int nMoments) {
+
+  vector<double> result(nMoments, 0.0);
+  double angleSpacing = numbers::pi / intensity.size();
+
+  for (int i = 0; i < nMoments; i++) {
+    double sum = 0.0;
+    for (int j = 0; j < intensity.size(); j++) {
+      double angle = (j+0.5) * angleSpacing;
+      sum += intensity[j] * sin(angle) * legendre(i, cos(angle));
+    }
+    sum *= angleSpacing;
+    result[i] = sum;
+  }
+
+  for (int i = nMoments-1; i >= 0; i--)
+    result[i] /= result[0];
 
   return result;
 }
@@ -36,7 +81,7 @@ vector<vector<double>> projectionMatrix(int n) {
   
   vector<vector<double>> result(n, vector<double>(n, 0.0));
   result[0][0] = 1.0;
-
+  
   for (int i = 1; i < n; i++)
     for (int j = i; j < n; j += 2) {
       long double prefactor = 0.5 * sqrt(numbers::pi) * (2*j + 1) / pow(4, j);

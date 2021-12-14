@@ -301,6 +301,18 @@ vector<double> Structure::odf(int nBins) {
   return result;
 }
 
+vector<double> Structure::intensityDistributionTube(double q, int nPoints) {
+  double angleSpacing = numbers::pi / nPoints;
+  vector<double> result(nPoints, 0.0);
+
+  for (int i = 0; i < nPoints; i++) {
+    double angle = (i+0.5) * angleSpacing;
+    result[i] = pow(sinc(0.5*lTube*q*cos(angle)) * cyl_bessel_j(0, rTube*q*sin(angle)), 2);
+  }
+
+  return result;
+}
+
 vector<double> Structure::intensityDistribution2D(double radius, int nBins) {
   
   vector<double> result(nBins, 0.0);
@@ -474,7 +486,7 @@ void Structure::generate(int seed) {
     double tY = tDistributionY(generator);
     double tZ = tDistributionZ(generator);
  
-    // if (sDistribution(generator) < 0.5) tZ *= -1.0;
+    if (sDistribution(generator) < 0.5) tZ *= -1.0;
 
     XYZ s(sX, sY, sZ);
     XYZ t(tX, tY, tZ);
